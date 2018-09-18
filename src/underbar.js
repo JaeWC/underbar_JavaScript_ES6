@@ -166,37 +166,28 @@
     // terms of reduce(). Here's a freebie to demonstrate!
     collection = Object.values(collection);
     return _.reduce(collection, (wasFound, item) => {
-      if (wasFound) {
-        return true;
-      }
-      return item === target;
+      return (wasFound) ? true :  item === target;
     }, false);
   };
 
 
   // Determine whether all of the elements match a truth test.
-  _.every = (collection, iterator) => {
+  _.every = (collection, iterator) =>
     // TIP: Try re-using reduce() here.
-    iterator = iterator || _.identity;
-
-    return _.reduce(collection, (isEvery, item) => {
-      if (!iterator(item)) return false;
-      return isEvery;
+    _.reduce(collection, (isEvery, item) => {
+      iterator = iterator || _.identity;
+      return (!iterator(item)) ? false : isEvery;
     }, true)
-  };
+
 
   // Determine whether any of the elements pass a truth test. If no iterator is
   // provided, provide a default one
-  _.some = (collection, iterator) => {
+  _.some = (collection, iterator) =>
     // TIP: There's a very clever way to re-use every() here.
-    iterator = iterator || _.identity;
-
-    return _.reduce(collection, (isSome, item) => {
-      if (iterator(item)) return true;
-      return isSome;
+    _.reduce(collection, (isSome, item) => {
+      iterator = iterator || _.identity;
+      return (iterator(item)) ? true : isSome;
     }, false)
-  };
-
 
   /**
    * OBJECTS
@@ -304,7 +295,7 @@
   _.delay = function(func, wait) {
     var args = Array.prototype.slice.call(arguments, 2);
 
-    return setTimeout(() => { func.apply(null, args); }, wait);
+    setTimeout(() => { func.apply(null, args); }, wait);
   };
 
 
@@ -340,14 +331,63 @@
 
   // Calls the method named by functionOrKey on each value in the list.
   // Note: You will need to learn a bit about .apply to complete this.
-  _.invoke = function(collection, functionOrKey, args) {
+  _.invoke = (collection, functionOrKey, args) => {
+    if (typeof functionOrKey === 'function') {
+      return _.map(collection, (element) => functionOrKey.call(element))
+    } else if (typeof collection[0] === 'string') {
+      return _.map(collection, (element) => String.prototype[functionOrKey].call(element))
+    }
   };
 
   // Sort the object's values by a criterion produced by an iterator.
   // If iterator is a string, sort objects by that property with the name
   // of that string. For example, _.sortBy(people, 'name') should sort
   // an array of people by their name.
+
+  var sortNumber = function(collection, iterator) {
+    if (typeof iterator === 'function') {
+      collection = _.map(collection, (element) => iterator.call(element))
+
+      if (_.contains(collection, undefined)) {
+        var count = 0;
+        for (var i = 0; i < collection.length; i++) {
+          if (collection[i] === undefined) {
+            count += 1;
+          }
+        }
+
+        collection = _.filter(collection, function(element) {
+          if (element !== undefined) {
+            return element;
+          }
+        })
+      }
+
+      var sorted = [];
+      for (var i = 0; i < collection.length; i++) {
+        var minNum = Math.min.apply(null, collection);
+        sorted.push(minNum);
+        collection.splice(collection.indexOf(minNum), 1);
+      }
+
+      if (count >= 1) {
+        for (var j = count; j === 0; j--) {
+          sorted.push(undefined);
+        }
+      }
+
+      return sorted;
+
+
+    }
+    // else {
+
+    // }
+  }
+
   _.sortBy = function(collection, iterator) {
+
+    return sortNumber(collection, iterator);
   };
 
   // Zip together two or more arrays with elements of the same index
@@ -356,23 +396,75 @@
   // Example:
   // _.zip(['a','b','c','d'], [1,2,3]) returns [['a',1], ['b',2], ['c',3], ['d',undefined]]
   _.zip = function() {
+    var temp = [];
+    for (var i = 0; i < arguments.length; i++) {
+      temp.push(arguments[i].length);
+    }
+    const maxLength = Math.max.apply(null, temp);
+
+    let zippedArr = [];
+    for (var i = 0; i < maxLength; i++) {
+      var innerArr = [];
+      for (var j = 0; j < arguments.length; j++) {
+        innerArr.push(arguments[j][i]);
+      }
+      zippedArr.push(innerArr);
+    }
+
+    return zippedArr;
   };
 
   // Takes a multidimensional array and converts it to a one-dimensional array.
   // The new array should contain all elements of the multidimensional array.
   //
   // Hint: Use Array.isArray to check if something is an array
-  _.flatten = function(nestedArray, result) {
+  _.flatten = (nestedArray, result) => {
+    result = result || [];
+
+    for (var i = 0; i < nestedArray.length; i++) {
+      if (Array.isArray(nestedArray[i])) {
+        _.flatten(nestedArray[i], result);
+      } else {
+        result.push(nestedArray[i])
+      }
+    }
+
+    return result;
   };
 
   // Takes an arbitrary number of arrays and produces an array that contains
   // every item shared between all the passed-in arrays.
   _.intersection = function() {
+    let interArr = [];
+    let firstArg = arguments[0];
+
+    for (var i = 0; i < firstArg.length; i++) {
+      for (var j = 1; j < arguments.length; j++) {
+        if (_.contains(arguments[j], firstArg[i])) {
+          interArr.push(firstArg[i]);
+        }
+      }
+    }
+
+    return interArr;
   };
 
   // Take the difference between one array and a number of other arrays.
   // Only the elements present in just the first array will remain.
   _.difference = function(array) {
+    let diffArr = [];
+    let firstArg = arguments[0];
+
+    for (var i = 0; i < firstArg.length; i++) {
+      for (var j = 1; j < arguments.length; j++) {
+        if (_.contains(arguments[j], firstArg[i])) {
+          firstArg.splice(i, 1, undefined);
+        }
+      }
+    }
+    return _.filter(firstArg, (value) => {
+      if (value !== undefined) return value
+    });
   };
 
   // Returns a function, that, when invoked, will only be triggered at most once
@@ -381,6 +473,21 @@
   //
   // Note: This is difficult! It may take a while to implement.
   _.throttle = function(func, wait) {
+    var alreadyCalled = true;
+
+    return function() {
+      if (alreadyCalled) {
+        var t0 = performance.now();
+        func.apply(this, arguments);
+        var t1 = performance.now();
+
+        if ((t1 - t0) * 1000 >= wait) {
+          func.apply(this, arguments);
+          alreadyCalled = false;
+        }
+        alreadyCalled = false;
+      }
+    }
   };
 
   if ( typeof module === "object" && typeof module.exports === "object" ) {
