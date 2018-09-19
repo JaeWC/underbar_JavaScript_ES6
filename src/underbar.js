@@ -292,10 +292,8 @@
   // The arguments for the original function are passed after the wait
   // parameter. For example _.delay(someFunction, 500, 'a', 'b') will
   // call someFunction('a', 'b') after 500ms
-  _.delay = function(func, wait) {
-    var args = Array.prototype.slice.call(arguments, 2);
-
-    setTimeout(() => { func.apply(null, args); }, wait);
+  _.delay = (...args) => {
+    setTimeout.apply(null, args);
   };
 
 
@@ -344,50 +342,27 @@
   // of that string. For example, _.sortBy(people, 'name') should sort
   // an array of people by their name.
 
-  var sortNumber = function(collection, iterator) {
-    if (typeof iterator === 'function') {
-      collection = _.map(collection, (element) => iterator.call(element))
-
-      if (_.contains(collection, undefined)) {
-        var count = 0;
-        for (var i = 0; i < collection.length; i++) {
-          if (collection[i] === undefined) {
-            count += 1;
-          }
-        }
-
-        collection = _.filter(collection, function(element) {
-          if (element !== undefined) {
-            return element;
-          }
-        })
-      }
-
-      var sorted = [];
-      for (var i = 0; i < collection.length; i++) {
-        var minNum = Math.min.apply(null, collection);
-        sorted.push(minNum);
-        collection.splice(collection.indexOf(minNum), 1);
-      }
-
-      if (count >= 1) {
-        for (var j = count; j === 0; j--) {
-          sorted.push(undefined);
-        }
-      }
-
-      return sorted;
-
-
-    }
-    // else {
-
-    // }
-  }
-
   _.sortBy = function(collection, iterator) {
+    let temp;
 
-    return sortNumber(collection, iterator);
+    if (typeof iterator !== 'function') {
+      if (typeof String.prototype[iterator] === 'function') {
+        iterator = String.prototype[iterator].call(x);
+      } else {
+        iterator = (x) => x.length;
+      }
+    }
+
+    for (let i = 0; i < collection.length; i++) {
+      for (let j = i + 1; j < collection.length; j++) {
+        if (String(iterator(collection[i])) > String(iterator(collection[j]))) {
+          temp = collection[i];
+          collection[i] = collection[j]
+          collection[j] = temp
+        }
+      }
+    }
+    return collection
   };
 
   // Zip together two or more arrays with elements of the same index
